@@ -87,6 +87,88 @@ export class RedisService {
             console.error(`Error deleting key ${key} from Redis:`, error);
         }
     }
+
+    /**
+     * Increment a counter atkey
+     */
+    public async incr(key: string): Promise<number | null> {
+        if (!this.client || !this.isConnected) return null;
+        try {
+            return await this.client.incr(key);
+        } catch (error) {
+            console.error(`Error incrementing key ${key} in Redis:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Decrement a counter at key
+     */
+    public async decr(key: string): Promise<number | null> {
+        if (!this.client || !this.isConnected) return null;
+        try {
+            return await this.client.decr(key);
+        } catch (error) {
+            console.error(`Error decrementing key ${key} in Redis:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Add or update score of a member in a sorted set (Ranking)
+     */
+    public async zadd(key: string, score: number, member: string): Promise<void> {
+        if (!this.client || !this.isConnected) return;
+        try {
+            await this.client.zadd(key, score, member);
+        } catch (error) {
+            console.error(`Error in ZADD for key ${key}:`, error);
+        }
+    }
+
+    /**
+     * Get top N members from a sorted set (descending)
+     */
+    public async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
+        if (!this.client || !this.isConnected) return [];
+        try {
+            return await this.client.zrevrange(key, start, stop);
+        } catch (error) {
+            console.error(`Error in ZREVRANGE for key ${key}:`, error);
+            return [];
+        }
+    }
+
+    /**
+     * Increment score of a member in a sorted set (Votación)
+     */
+    public async zincrby(key: string, increment: number, member: string): Promise<void> {
+        if (!this.client || !this.isConnected) return;
+        try {
+            await this.client.zincrby(key, increment, member);
+        } catch (error) {
+            console.error(`Error in ZINCRBY for key ${key}:`, error);
+        }
+    }
+
+    /**
+     * Remove a member from a sorted set
+     */
+    public async zrem(key: string, member: string): Promise<void> {
+        if (!this.client || !this.isConnected) return;
+        try {
+            await this.client.zrem(key, member);
+        } catch (error) {
+            console.error(`Error in ZREM for key ${key}:`, error);
+        }
+    }
+
+    /**
+     * Get the raw Redis client
+     */
+    public getClient(): Redis | null {
+        return this.client;
+    }
 }
 
 export const redisService = RedisService.getInstance();

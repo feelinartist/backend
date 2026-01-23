@@ -1,5 +1,5 @@
-
 import { PrismaClient } from "@prisma/client";
+import { redisService } from "../services/redis-service";
 
 const prisma = new PrismaClient();
 
@@ -36,7 +36,7 @@ export class PrismaEventoRepository {
             throw new Error("Ya tienes un evento en curso. Finalízalo antes de iniciar uno nuevo.");
         }
 
-        return await prisma.$transaction(async (tx) => {
+        const nuevoEvento = await prisma.$transaction(async (tx) => {
             // Activate QR for requests
             await tx.perfilArtista.update({
                 where: { id: artistaId },
@@ -58,6 +58,12 @@ export class PrismaEventoRepository {
                 },
             });
         });
+
+        // 🛡️ Redis: Invalidar caché de evento activo
+        await redisService.del(`artist:${artistaId}:active_event`);
+        await redisService.del(`artist:${perfil.usuarioId}:active_event`);
+
+        return nuevoEvento;
     }
 
     async finalizarEvento(eventoId: string) {
@@ -73,6 +79,7 @@ export class PrismaEventoRepository {
             }
 
             const usuarioId = eventoExistente.perfilArtista?.usuarioId;
+            const artistaId = eventoExistente.perfilArtistaId;
 
             const evento = await tx.evento.update({
                 where: { id: eventoId },
@@ -98,11 +105,24 @@ export class PrismaEventoRepository {
                 }
             });
 
+            // 🛡️ Redis: Invalidar caché
+            if (artistaId) await redisService.del(`artist:${artistaId}:active_event`);
+            if (usuarioId) await redisService.del(`artist:${usuarioId}:active_event`);
+
             return evento;
         });
     }
 
     async obtenerEventoActivo(userIdOrArtistaId: string) {
+        // 1. Try Redis Cache
+        const cacheKey = `artist:${userIdOrArtistaId}:active_event`;
+        try {
+            const cached = await redisService.get(cacheKey);
+            if (cached) return JSON.parse(cached);
+        } catch (err) {
+            console.warn('Redis error in obtenerEventoActivo:', err);
+        }
+
         const perfil = await prisma.perfilArtista.findFirst({
             where: {
                 OR: [
@@ -115,7 +135,7 @@ export class PrismaEventoRepository {
         if (!perfil) return null;
         const artistaId = perfil.id;
 
-        return await prisma.evento.findFirst({
+        const evento = await prisma.evento.findFirst({
             where: {
                 perfilArtistaId: artistaId,
                 activo: true,
@@ -124,6 +144,17 @@ export class PrismaEventoRepository {
                 horaInicio: 'desc',
             },
         });
+
+        // 2. Save to Cache (short TTL for active events: 5 min)
+        if (evento) {
+            try {
+                await redisService.set(cacheKey, JSON.stringify(evento), 300);
+            } catch (err) {
+                console.warn('Redis save error in obtenerEventoActivo:', err);
+            }
+        }
+
+        return evento;
     }
 
     async togglePedidos(userIdOrArtistaId: string, activo: boolean) {
@@ -145,6 +176,9 @@ export class PrismaEventoRepository {
                 pedidosActivos: activo,
             },
         });
+
+        // 🛡️ Redis: Invalidar caché para que se refleje el cambio de 'pedidosActivos' si se cacheó
+        await redisService.del(`artist:${userIdOrArtistaId}:active_event`);
 
         return {
             id: updated.id,

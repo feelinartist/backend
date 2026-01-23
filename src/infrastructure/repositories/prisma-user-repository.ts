@@ -3,6 +3,7 @@ import { Usuario, CrearUsuarioDTO, ActualizarUsuarioDTO } from '../../domain/ent
 import prisma from '../database/prisma';
 import { Prisma } from '@prisma/client';
 import { LocalFileService } from '../services/local-file-service';
+import { redisService } from '../services/redis-service';
 
 const localFileService = new LocalFileService();
 
@@ -90,6 +91,19 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
     }
 
     async buscarPorNombreUsuario(nombreUsuario: string, usuarioSolicitanteId?: string): Promise<Usuario | null> {
+        // 1. Try to get from Redis Cache if public request (no solicitor)
+        const cacheKey = `user:profile:${nombreUsuario}`;
+        if (!usuarioSolicitanteId) {
+            try {
+                const cached = await redisService.get(cacheKey);
+                if (cached) {
+                    return JSON.parse(cached);
+                }
+            } catch (err) {
+                console.warn('Redis Cache Error (Profile):', err);
+            }
+        }
+
         const usuario = await prisma.usuario.findUnique({
             where: { nombreUsuario },
             include: {
@@ -113,13 +127,24 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
         if (!usuario) return null;
 
         if (usuarioSolicitanteId) {
-
             if (usuario.bloqueados?.length > 0 || usuario.bloqueadoPor?.length > 0) {
                 return null;
             }
         }
 
-        return this.mapToEntity(usuario);
+        const entity = this.mapToEntity(usuario);
+
+        // 2. Save to Cache if public request
+        if (!usuarioSolicitanteId) {
+            try {
+                // Cache for 10 minutes
+                await redisService.set(cacheKey, JSON.stringify(entity), 600);
+            } catch (err) {
+                console.warn('Redis Save Cache Error (Profile):', err);
+            }
+        }
+
+        return entity;
     }
 
     async actualizar(id: string, datos: ActualizarUsuarioDTO): Promise<Usuario> {

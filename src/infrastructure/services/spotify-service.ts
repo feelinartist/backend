@@ -103,4 +103,32 @@ export class SpotifyService {
             return null;
         }
     }
+
+    public async getArtistGenres(artistId: string): Promise<string[]> {
+        // Try cache first
+        const cacheKey = `spotify:artist:genres:${artistId}`;
+        const { redisService } = await import('./redis-service');
+
+        try {
+            const cached = await redisService.get(cacheKey);
+            if (cached) return JSON.parse(cached);
+        } catch (err) {
+            console.warn('Redis error in getArtistGenres:', err);
+        }
+
+        const artist = await this.getArtist(artistId);
+        const artistData = artist as { genres?: string[] };
+        const genres = artistData?.genres || [];
+
+        // Save to cache (24 hours)
+        if (genres.length > 0) {
+            try {
+                await redisService.set(cacheKey, JSON.stringify(genres), 86400);
+            } catch (err) {
+                console.warn('Redis save error in getArtistGenres:', err);
+            }
+        }
+
+        return genres;
+    }
 }
