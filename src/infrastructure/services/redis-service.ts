@@ -140,6 +140,27 @@ export class RedisService {
     }
 
     /**
+     * Get top N members from a sorted set with scores (descending)
+     */
+    public async zrevrangeWithScores(key: string, start: number, stop: number): Promise<{ member: string, score: number }[]> {
+        if (!this.client || !this.isConnected) return [];
+        try {
+            const results = await this.client.zrevrange(key, start, stop, 'WITHSCORES');
+            const formatted: { member: string, score: number }[] = [];
+            for (let i = 0; i < results.length; i += 2) {
+                formatted.push({
+                    member: results[i],
+                    score: parseFloat(results[i + 1])
+                });
+            }
+            return formatted;
+        } catch (error) {
+            console.error(`Error in ZREVRANGE WITHSCORES for key ${key}:`, error);
+            return [];
+        }
+    }
+
+    /**
      * Increment score of a member in a sorted set (Votación)
      */
     public async zincrby(key: string, increment: number, member: string): Promise<void> {

@@ -35,14 +35,27 @@ export class PrismaPedidoRepository {
             }
         });
 
-        // 🛡️ Redis: Contadores de pedidos en tiempo real
+        // 🛡️ Redis: Contadores y Ranking de Popularidad en Tiempo Real
         try {
             await redisService.incr(`event:${eventoId}:orders:total`);
-            // Contador global de pedidos procesados por el backend (para dashboard admin)
             await redisService.incr('stats:orders:total');
 
-            // 🚀 Mover pedido a la "Cola Viva" de Redis (Sorted Set)
-            // Usamos el timestamp como puntuación para mantener el orden cronológico ultra-rápido
+            // Identificador único para la canción (Spotify ID o combinación de nombre)
+            const songIdentifier = spotifyId || `${titulo.toLowerCase().trim()}:${artista?.toLowerCase().trim()}`;
+
+            // Creamos el objeto de la canción para el Ranking (sin IDs únicos de pedido para permitir agrupación)
+            const songData = JSON.stringify({
+                titulo,
+                artista,
+                spotifyId,
+                genero // Se actualizará si se encuentra después
+            });
+
+            // 🚀 INCREMENTAR VOTOS: En Redis, el Sorted Set 'ranking' guardará la canción
+            // y su puntuación será el número de personas que la han pedido.
+            await redisService.zincrby(`event:${eventoId}:popularity_ranking`, 1, songData);
+
+            // También mantenemos la cola cronológica para el historial rápido si fuera necesario
             const liveOrderData = JSON.stringify({
                 id: pedido.id,
                 titulo: pedido.titulo,
@@ -52,8 +65,9 @@ export class PrismaPedidoRepository {
                 creadoEn: pedido.creadoEn
             });
             await redisService.zadd(`event:${eventoId}:live_queue`, Date.now(), liveOrderData);
+
         } catch (err) {
-            console.warn('Error updating live order data in Redis:', err);
+            console.warn('Error updating popularity ranking in Redis:', err);
         }
 
         // 🔍 Intentar obtener género exacto si falta y es de Spotify
@@ -114,21 +128,38 @@ export class PrismaPedidoRepository {
     }
 
     async obtenerPedidosPorEvento(eventoId: string) {
-        // 1. Intentar obtener de la "Cola Viva" de Redis primero (solo los pendientes recientes)
+        // 1. Intentar obtener el Ranking de Popularidad de Redis
+        try {
+            const ranking = await redisService.zrevrangeWithScores(`event:${eventoId}:popularity_ranking`, 0, 49);
+            if (ranking.length > 0) {
+                return ranking.map(item => {
+                    const data = JSON.parse(item.member);
+                    return {
+                        ...data,
+                        votos: item.score,
+                        esRanking: true
+                    };
+                });
+            }
+        } catch (err) {
+            console.warn('Error fetching popularity ranking from Redis, falling back to live queue:', err);
+        }
+
+        // 2. Intentar obtener de la "Cola Viva" cronológica (Fallback 1)
         try {
             const liveQueue = await redisService.zrevrange(`event:${eventoId}:live_queue`, 0, 99);
             if (liveQueue.length > 0) {
-                return liveQueue.map(item => JSON.parse(item));
+                return liveQueue.map((item: string) => JSON.parse(item));
             }
         } catch (err) {
             console.warn('Error fetching live queue from Redis, falling back to DB:', err);
         }
 
-        // 2. Fallback a DB si Redis falla o está vacío
+        // 3. Fallback a DB (Prisma)
         return await prisma.pedidoCancion.findMany({
             where: {
                 eventoId,
-                estado: 'PENDIENTE' // En la vista en vivo solo interesan los pendientes
+                estado: 'PENDIENTE'
             },
             take: 100,
             orderBy: { creadoEn: 'desc' }
@@ -147,7 +178,8 @@ export class PrismaPedidoRepository {
                 perfilArtistaId: true,
                 eventoId: true,
                 nombreSolicitante: true,
-                creadoEn: true
+                creadoEn: true,
+                genero: true
             }
         });
 
@@ -162,9 +194,10 @@ export class PrismaPedidoRepository {
         // 🛡️ Redis: Limpieza de la Cola Viva y actualización de contadores
         if (pedidoAnterior.perfilArtistaId && pedidoAnterior.eventoId) {
             try {
-                // Si ya no es PENDIENTE, lo quitamos de la cola viva de Redis
+                // Si ya no es PENDIENTE, lo quitamos de la cola viva y del ranking de Redis
                 if (estado !== 'PENDIENTE') {
-                    const queueItem = JSON.stringify({
+                    // 1. Quitar de la cola cronológica
+                    const cronQueueItem = JSON.stringify({
                         id: id,
                         titulo: pedidoAnterior.titulo,
                         artista: pedidoAnterior.artista,
@@ -172,7 +205,16 @@ export class PrismaPedidoRepository {
                         spotifyId: pedidoAnterior.spotifyId,
                         creadoEn: pedidoAnterior.creadoEn
                     });
-                    await redisService.zrem(`event:${pedidoAnterior.eventoId}:live_queue`, queueItem);
+                    await redisService.zrem(`event:${pedidoAnterior.eventoId}:live_queue`, cronQueueItem);
+
+                    // 2. Quitar del ranking de popularidad (agrupado)
+                    const popularityItem = JSON.stringify({
+                        titulo: pedidoAnterior.titulo,
+                        artista: pedidoAnterior.artista,
+                        spotifyId: pedidoAnterior.spotifyId,
+                        genero: pedidoAnterior.genero
+                    });
+                    await redisService.zrem(`event:${pedidoAnterior.eventoId}:popularity_ranking`, popularityItem);
                 }
 
                 const estadoAnterior = pedidoAnterior.estado;
