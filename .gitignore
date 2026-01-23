@@ -21,3 +21,6 @@ yarn-error.log*
 # System
 .DS_Store
 Thumbs.db
+
+# User Uploads (Local Storage)
+uploads

@@ -94,8 +94,8 @@ model PerfilArtista {
   ciudad           String?
   pais             String?
   zonaHoraria      String
-  codigoQR         String?
-  imagenQR         String?
+  musicQR          String? // Antes codigoQR - QR para pedir música
+  pagoQR           String? // Antes imagenQR - QR de pago (Yape/Plin)
   nombreQR         String?
   urlPago          String?
   urlYoutubeFavorito    String?

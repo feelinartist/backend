@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { CloudinaryService } from '../../infrastructure/services/cloudinary-service';
+import { LocalFileService } from '../../infrastructure/services/local-file-service';
 
-const cloudinaryService = new CloudinaryService();
+const imageService = new LocalFileService();
 
 export class ControladorImagenes {
     /**
@@ -17,13 +17,13 @@ export class ControladorImagenes {
                 return res.status(400).json({ message: 'Datos inválidos' });
             }
 
-            const folder = cloudinaryService.getUserFolder(usuarioId, 'gallery');
             const uploadedImages = [];
 
             for (let i = 0; i < images.length; i++) {
-                const result = await cloudinaryService.uploadBase64Image(
+                const result = await imageService.uploadBase64Image(
                     images[i],
-                    folder,
+                    usuarioId,
+                    'gallery',
                     `image_${Date.now()}_${i}`
                 );
                 uploadedImages.push(result.url);
@@ -49,10 +49,10 @@ export class ControladorImagenes {
                 return res.status(400).json({ message: 'Datos inválidos' });
             }
 
-            const folder = cloudinaryService.getUserFolder(usuarioId, 'payment');
-            const result = await cloudinaryService.uploadBase64Image(
+            const result = await imageService.uploadBase64Image(
                 image,
-                folder,
+                usuarioId,
+                'payment',
                 'qr_payment'
             );
 
@@ -64,7 +64,34 @@ export class ControladorImagenes {
     }
 
     /**
-     * Delete an image from Cloudinary
+     * Upload profile picture
+     * POST /api/imagenes/perfil
+     * Body: { usuarioId: string, image: string } // base64 image
+     */
+    async subirImagenPerfil(req: Request, res: Response) {
+        try {
+            const { usuarioId, image } = req.body;
+
+            if (!usuarioId || !image) {
+                return res.status(400).json({ message: 'Datos inválidos' });
+            }
+
+            const result = await imageService.uploadBase64Image(
+                image,
+                usuarioId,
+                'profile',
+                `profile_${Date.now()}`
+            );
+
+            res.json({ url: result.url });
+        } catch (error) {
+            console.error('Error uploading profile picture:', error);
+            res.status(500).json({ message: (error as Error).message || 'Error al subir la foto de perfil' });
+        }
+    }
+
+    /**
+     * Delete an image
      * DELETE /api/imagenes
      * Body: { publicId: string }
      */
@@ -73,10 +100,10 @@ export class ControladorImagenes {
             const { publicId } = req.body;
 
             if (!publicId) {
-                return res.status(400).json({ message: 'Public ID requerido' });
+                return res.status(400).json({ message: 'Public ID (path relativo) requerido' });
             }
 
-            await cloudinaryService.deleteImage(publicId);
+            await imageService.deleteImage(publicId);
             res.json({ message: 'Imagen eliminada correctamente' });
         } catch (error) {
             console.error('Error deleting image:', error);

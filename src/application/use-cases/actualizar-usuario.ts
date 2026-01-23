@@ -31,7 +31,8 @@ export class ActualizarUsuarioCasoUso {
         lugaresConocidos?: string[];
         fechaInicio?: Date | string;
         fechaFundacion?: Date | string;
-        imagenQR?: string;
+        pagoQR?: string;
+        musicQR?: string;
         nombreQR?: string;
         urlPago?: string;
         urlYoutubeFavorito?: string;
@@ -101,7 +102,8 @@ export class ActualizarUsuarioCasoUso {
                 ...(dto.moneda && { moneda: dto.moneda }),
                 ...(dto.lugaresConocidos && { lugaresConocidos: dto.lugaresConocidos }),
                 ...(dto.fechaInicio && { fechaInicio: new Date(dto.fechaInicio) }),
-                ...(dto.imagenQR !== undefined && { imagenQR: dto.imagenQR }),
+                ...(dto.pagoQR !== undefined && { pagoQR: dto.pagoQR }),   // Renamed from imagenQR
+                ...(dto.musicQR !== undefined && { musicQR: dto.musicQR }), // Renamed from codigoQR
                 ...(dto.nombreQR !== undefined && { nombreQR: dto.nombreQR }),
                 ...(dto.urlPago !== undefined && { urlPago: dto.urlPago }),
                 ...(dto.urlYoutubeFavorito !== undefined && { urlYoutubeFavorito: dto.urlYoutubeFavorito }),

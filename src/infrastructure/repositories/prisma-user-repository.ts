@@ -2,6 +2,9 @@ import { RepositorioUsuario } from '../../domain/repositories/user-repository';
 import { Usuario, CrearUsuarioDTO, ActualizarUsuarioDTO } from '../../domain/entities/user';
 import prisma from '../database/prisma';
 import { Prisma } from '@prisma/client';
+import { LocalFileService } from '../services/local-file-service';
+
+const localFileService = new LocalFileService();
 
 export class RepositorioUsuarioPrisma implements RepositorioUsuario {
     async crear(datos: CrearUsuarioDTO): Promise<Usuario> {
@@ -159,12 +162,10 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
                     const publicId = this.extractPublicIdFromUrl(existingProfile.imagenQR);
                     if (publicId) {
                         try {
-                            const { CloudinaryService } = await import('../../infrastructure/services/cloudinary-service');
-                            const cloudinaryService = new CloudinaryService();
-                            await cloudinaryService.deleteImage(publicId);
+                            await localFileService.deleteImage(publicId);
                         } catch (error) {
-                            console.error('Error deleting QR image from Cloudinary:', error);
-                            // Continue with update even if Cloudinary deletion fails
+                            console.error('Error deleting QR image:', error);
+                            // Continue...
                         }
                     }
                 }
@@ -218,20 +219,18 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
                     select: { urlImagen: true }
                 });
 
-                // Extract publicIds from Cloudinary URLs and delete from Cloudinary
+                // Extract publicIds from URLs and delete
                 if (existingGallery.length > 0) {
-                    const { CloudinaryService } = await import('../../infrastructure/services/cloudinary-service');
-                    const cloudinaryService = new CloudinaryService();
                     const publicIds = existingGallery
                         .map(img => this.extractPublicIdFromUrl(img.urlImagen))
                         .filter(id => id !== null) as string[];
 
                     if (publicIds.length > 0) {
                         try {
-                            await cloudinaryService.deleteImages(publicIds);
+                            // LocalFileService doesn't have deleteImages (plural), iterate
+                            await Promise.all(publicIds.map(pid => localFileService.deleteImage(pid)));
                         } catch (error) {
-                            console.error('Error deleting images from Cloudinary:', error);
-                            // Continue with database deletion even if Cloudinary deletion fails
+                            console.error('Error deleting images:', error);
                         }
                     }
                 }
@@ -475,13 +474,19 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
     }
 
     /**
-     * Extract Cloudinary publicId from a Cloudinary URL
-     * Example: https://res.cloudinary.com/djfkyim7a/image/upload/v1234567890/feelin/users/abc-123/gallery/image_123.jpg
-     * Returns: feelin/users/abc-123/gallery/image_123
+     * Extract publicId (relative path without extension) from a URL
+     * Supports both Cloudinary (legacy) and Local (new) URLs
      */
     private extractPublicIdFromUrl(url: string): string | null {
         try {
-            // Match Cloudinary URL pattern
+            // 1. Handle Local URLs: /uploads/users/123/profile/abc.webp
+            // We want: users/123/profile/abc
+            if (url.startsWith('/uploads/') || url.includes('/uploads/')) {
+                const match = url.match(/\/uploads\/(.+)\.\w+$/);
+                return match ? match[1] : null;
+            }
+
+            // 2. Handle Cloudinary URLs (Legacy fallback)
             const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.\w+$/);
             return match ? match[1] : null;
         } catch (error) {

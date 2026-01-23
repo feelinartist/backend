@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
@@ -27,6 +28,11 @@ async function startServer() {
 
     app.use(cors());
     app.use(express.json({ limit: '50mb' }));
+
+    // Serve static files from uploads directory
+    // Maps http://host:port/uploads -> /path/to/project/uploads
+    app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
     app.use('/api', routes);
 
     io.on('connection', (socket) => {

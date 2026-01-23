@@ -55,6 +55,7 @@ import { ControladorImagenes } from './controllers/controlador-imagenes';
 const controladorImagenes = new ControladorImagenes();
 router.post('/imagenes/galeria', (req, res) => controladorImagenes.subirImagenesGaleria(req, res));
 router.post('/imagenes/qr-pago', (req, res) => controladorImagenes.subirQRPago(req, res));
+router.post('/imagenes/perfil', (req, res) => controladorImagenes.subirImagenPerfil(req, res));
 router.delete('/imagenes', (req, res) => controladorImagenes.eliminarImagen(req, res));
 
 // Placeholder routes

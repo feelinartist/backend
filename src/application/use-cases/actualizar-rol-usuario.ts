@@ -2,16 +2,16 @@ import { RepositorioUsuario } from '../../domain/repositories/user-repository';
 import { Usuario } from '../../domain/entities/user';
 
 
-import { CloudinaryService } from '../../infrastructure/services/cloudinary-service';
+import { LocalFileService } from '../../infrastructure/services/local-file-service';
 import { QrService } from '../../infrastructure/services/qr-service';
 import { configService } from '../../infrastructure/services/config-service';
 
 export class ActualizarRolUsuarioCasoUso {
-    private cloudinaryService: CloudinaryService;
+    private localFileService: LocalFileService;
     private qrService: QrService;
 
     constructor(private repositorioUsuario: RepositorioUsuario) {
-        this.cloudinaryService = new CloudinaryService();
+        this.localFileService = new LocalFileService();
         this.qrService = new QrService();
     }
 
@@ -29,12 +29,16 @@ export class ActualizarRolUsuarioCasoUso {
                     const profileUrl = `${frontendUrl}/artist/${username}/music`;
                     const qrBuffer = await this.qrService.generateQrCode(profileUrl);
 
-                    // Use organized folder structure: feelin/users/{userId}/profile
-                    const folder = this.cloudinaryService.getUserFolder(usuario.id, 'profile');
-                    const qrUrl = await this.cloudinaryService.uploadImage(qrBuffer, folder);
+                    // Convert buffer to base64
+                    const qrBase64 = `data:image/png;base64,${qrBuffer.toString('base64')}`;
+
+                    // Use organized folder structure: uploads/users/{userId}/music/qr.webp
+                    // This is the "Scan for Music" QR.
+                    const result = await this.localFileService.uploadBase64Image(qrBase64, usuario.id, 'music', 'qr');
+                    const qrUrl = result.url;
 
                     if (!datosPerfilArtista) datosPerfilArtista = {};
-                    datosPerfilArtista.codigoQR = qrUrl;
+                    datosPerfilArtista.musicQR = qrUrl;   // New field name in Prisma
                 }
             } catch (error) {
                 console.error('Error generating/uploading QR code:', error);
