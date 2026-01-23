@@ -1,5 +1,4 @@
 import Redis from 'ioredis';
-import { configService } from './config-service';
 
 export class RedisService {
     private static instance: RedisService;
@@ -18,17 +17,11 @@ export class RedisService {
     }
 
     private async initializeClient() {
-        let redisUrl: string | null = null;
-        try {
-            redisUrl = await configService.get('REDIS_URL');
-        } catch {
-            // Config not found, proceed without Redis
-            console.log('ℹ️ Redis URL not found in config. Caching is disabled. (This is normal if you haven\'t configured Redis yet)');
-            return;
-        }
+        // Read REDIS_URL from environment variables
+        const redisUrl = process.env.REDIS_URL;
 
         if (!redisUrl) {
-            console.log('ℹ️ Redis URL is empty. Caching is disabled.');
+            console.log('ℹ️ REDIS_URL not configured in .env. Caching is disabled.');
             return;
         }
 

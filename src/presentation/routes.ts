@@ -2,6 +2,10 @@ import { Router } from 'express';
 import { ControladorAutenticacion } from './controllers/controlador-autenticacion';
 import { ControladorUsuario } from './controllers/controlador-usuario';
 import { ControladorAdminConfig } from './controllers/controlador-admin-config';
+import { authLimiter, uploadLimiter } from '../middleware/rate-limit';
+import { validate } from '../middleware/validate';
+import { updateRoleSchema, updateProfileSchema, usernameCheckSchema, blockUserSchema } from '../domain/schemas/user.schema';
+import { uploadGallerySchema, uploadQRSchema, uploadProfileSchema } from '../domain/schemas/image.schema';
 
 const router = Router();
 const controladorAutenticacion = new ControladorAutenticacion();
@@ -12,9 +16,10 @@ router.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-router.post('/auth/login', (req, res) => controladorAutenticacion.iniciarSesion(req, res));
-router.patch('/usuarios/rol', (req, res) => controladorUsuario.actualizarRol(req, res));
-router.patch('/usuarios/perfil', (req, res) => controladorUsuario.actualizarPerfil(req, res));
+// Authentication endpoints with strict rate limiting
+router.post('/auth/login', authLimiter, (req, res) => controladorAutenticacion.iniciarSesion(req, res));
+router.patch('/usuarios/rol', authLimiter, validate(updateRoleSchema), (req, res) => controladorUsuario.actualizarRol(req, res));
+router.patch('/usuarios/perfil', validate(updateProfileSchema), (req, res) => controladorUsuario.actualizarPerfil(req, res));
 router.get('/usuarios/perfil/:usuarioId', (req, res) => controladorUsuario.obtenerPerfil(req, res));
 router.get('/usuarios/perfil-publico/:username', (req, res) => controladorUsuario.obtenerPerfilPublico(req, res));
 router.patch('/usuarios/deshabilitar', (req, res) => controladorUsuario.deshabilitarCuenta(req, res));
@@ -22,12 +27,12 @@ router.delete('/usuarios/eliminar', (req, res) => controladorUsuario.eliminarCue
 router.patch('/usuarios/reactivar', (req, res) => controladorUsuario.reactivarCuenta(req, res));
 router.post('/usuarios/banear', (req, res) => controladorUsuario.banearUsuario(req, res));
 router.delete('/usuarios/eliminar-permanente', (req, res) => controladorUsuario.eliminarPermanente(req, res));
-router.post('/usuarios/bloquear', (req, res) => controladorUsuario.bloquearUsuario(req, res));
-router.post('/usuarios/desbloquear', (req, res) => controladorUsuario.desbloquearUsuario(req, res));
+router.post('/usuarios/bloquear', validate(blockUserSchema), (req, res) => controladorUsuario.bloquearUsuario(req, res));
+router.post('/usuarios/desbloquear', validate(blockUserSchema), (req, res) => controladorUsuario.desbloquearUsuario(req, res));
 router.get('/usuarios/bloqueados/:bloqueadorId', (req, res) => controladorUsuario.obtenerBloqueados(req, res));
 router.get('/usuarios/buscar', (req, res) => controladorUsuario.buscarArtistas(req, res));
 router.post('/usuarios/migrar-rol', (req, res) => controladorUsuario.migrarRol(req, res));
-router.post('/usuarios/verificar-nombre-usuario', (req, res) => controladorUsuario.verificarNombreUsuario(req, res));
+router.post('/usuarios/verificar-nombre-usuario', validate(usernameCheckSchema), (req, res) => controladorUsuario.verificarNombreUsuario(req, res));
 router.post('/usuarios/marcar-perfil-completado', (req, res) => controladorUsuario.marcarPerfilCompletadoReconocido(req, res));
 router.get('/paises', (req, res) => controladorUsuario.obtenerPaises(req, res));
 router.get('/ciudades/:paisId', (req, res) => controladorUsuario.obtenerCiudades(req, res));
@@ -50,12 +55,12 @@ const controladorSeguidor = new ControladorSeguidor();
 router.post('/usuarios/seguir', (req, res) => controladorSeguidor.seguir(req, res));
 router.post('/usuarios/dejar-de-seguir', (req, res) => controladorSeguidor.dejarDeSeguir(req, res));
 
-// Image upload routes
+// Image upload routes with rate limiting and validation
 import { ControladorImagenes } from './controllers/controlador-imagenes';
 const controladorImagenes = new ControladorImagenes();
-router.post('/imagenes/galeria', (req, res) => controladorImagenes.subirImagenesGaleria(req, res));
-router.post('/imagenes/qr-pago', (req, res) => controladorImagenes.subirQRPago(req, res));
-router.post('/imagenes/perfil', (req, res) => controladorImagenes.subirImagenPerfil(req, res));
+router.post('/imagenes/galeria', uploadLimiter, validate(uploadGallerySchema), (req, res) => controladorImagenes.subirImagenesGaleria(req, res));
+router.post('/imagenes/qr-pago', uploadLimiter, validate(uploadQRSchema), (req, res) => controladorImagenes.subirQRPago(req, res));
+router.post('/imagenes/perfil', uploadLimiter, validate(uploadProfileSchema), (req, res) => controladorImagenes.subirImagenPerfil(req, res));
 router.delete('/imagenes', (req, res) => controladorImagenes.eliminarImagen(req, res));
 
 // Placeholder routes

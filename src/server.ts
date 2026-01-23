@@ -3,8 +3,10 @@ import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import helmet from 'helmet';
 import routes from './presentation/routes';
 import { SocketService } from './infrastructure/services/socket-service';
+import { generalLimiter } from './middleware/rate-limit';
 
 const app = express();
 const httpServer = createServer(app);
@@ -26,7 +28,23 @@ async function startServer() {
     // Initialize Socket Service
     SocketService.getInstance().init(io);
 
-    app.use(cors());
+    // Security: Helmet for security headers
+    app.use(helmet({
+        contentSecurityPolicy: false, // Disable CSP for now (can be configured later)
+        crossOriginEmbedderPolicy: false // Allow embedding for development
+    }));
+
+    // Security: Restrictive CORS
+    app.use(cors({
+        origin: frontendUrl,
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    }));
+
+    // Security: Rate limiting
+    app.use('/api', generalLimiter);
+
     app.use(express.json({ limit: '50mb' }));
 
     // Serve static files from uploads directory

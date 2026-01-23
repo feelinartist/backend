@@ -28,7 +28,42 @@ FRONTEND_URL=http://localhost:3000
 # Security
 JWT_SECRET="your_jwt_secret_key"
 ENCRYPTION_KEY="your_encryption_key_32_chars"
+
+# Redis Cache (Optional - improves performance)
+REDIS_URL=redis://localhost:6379
 ```
+
+## Redis Setup (Optional but Recommended)
+
+Redis is used for caching to improve performance. While optional, it's highly recommended for production.
+
+### Installing Memurai (Redis for Windows)
+
+1. Download **Memurai Developer** (free) from: https://www.memurai.com/get-memurai
+2. Run the `.msi` installer
+3. Memurai will install as a Windows service and start automatically
+
+### Verify Installation
+
+```powershell
+# Check if Memurai service is running
+Get-Service Memurai
+
+# Test connection
+memurai-cli ping
+# Should respond: PONG
+```
+
+### For Linux/Production
+
+```bash
+sudo apt update
+sudo apt install redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+Once Redis is running, add `REDIS_URL=redis://localhost:6379` to your `.env` file.
 
 ## Getting Started
 
