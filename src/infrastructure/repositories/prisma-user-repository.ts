@@ -31,7 +31,6 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
     }
 
     async buscarPorCorreo(correo: string): Promise<Usuario | null> {
-        console.log(`[Repo] findUnique START: ${correo}`);
         try {
             const usuario = await prisma.usuario.findUnique({
                 where: { correo },
@@ -145,7 +144,7 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
         datosActualizacion.actualizadoPor = id;
 
         if (datos.perfilArtista) {
-            const { redesSociales, metodosDonacion, galeria, imagenQR, nombreQR, urlPago, nombreUsuario, ...perfilArtistaData } = datos.perfilArtista;
+            const { redesSociales, metodosDonacion, galeria, pagoQR, musicQR, nombreQR, urlPago, nombreUsuario, ...perfilArtistaData } = datos.perfilArtista;
 
             // Explicitly handle lugaresConocidos to avoid spread loss
             const nestedUpdate: Record<string, unknown> = {
@@ -154,17 +153,17 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
                 actualizadoPor: id // Audit: track who is updating
             };
 
-            // Handle imagenQR, nombreQR, and urlPago at PerfilArtista level
-            if (imagenQR !== undefined) {
+            // Handle pagoQR, naming, and urlPago at PerfilArtista level
+            if (pagoQR !== undefined) {
                 // Get existing QR image
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const existingProfile = await (prisma.perfilArtista as any).findUnique({
                     where: { usuarioId: id },
-                    select: { imagenQR: true }
+                    select: { pagoQR: true }
                 });
 
-                if (existingProfile?.imagenQR && existingProfile.imagenQR !== imagenQR) {
-                    const publicId = this.extractPublicIdFromUrl(existingProfile.imagenQR);
+                if (existingProfile?.pagoQR && existingProfile.pagoQR !== pagoQR) {
+                    const publicId = this.extractPublicIdFromUrl(existingProfile.pagoQR);
                     if (publicId) {
                         try {
                             await localFileService.deleteImage(publicId);
@@ -175,13 +174,13 @@ export class RepositorioUsuarioPrisma implements RepositorioUsuario {
                     }
                 }
 
-                nestedUpdate.imagenQR = imagenQR;
+                nestedUpdate.pagoQR = pagoQR;
             }
+            if (musicQR !== undefined) nestedUpdate.musicQR = musicQR;
             if (nombreQR !== undefined) nestedUpdate.nombreQR = nombreQR;
             if (urlPago !== undefined) nestedUpdate.urlPago = urlPago;
 
-            // Handle legacy field mapping if necessary
-            if (imagenQR !== undefined) nestedUpdate.codigoQR = imagenQR;
+
 
 
             // Handle Nested Relations

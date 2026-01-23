@@ -20,7 +20,4 @@ export const uploadProfileSchema = z.object({
     image: z.string().min(1, 'La imagen es requerida')
 });
 
-// Delete image schema
-export const deleteImageSchema = z.object({
-    url: z.string().url('URL inválida')
-});
+

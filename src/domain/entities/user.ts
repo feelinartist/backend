@@ -69,7 +69,8 @@ export interface ActualizarUsuarioDTO {
     ultimoCambioNombre?: Date;
     estadoCuenta?: 'ACTIVO' | 'DESHABILITADO' | 'ELIMINACION_PENDIENTE' | 'BANEADO';
     fechaEliminacionProgramada?: Date | null;
-    imagenQR?: string;
+    pagoQR?: string;
+    musicQR?: string;
     nombreQR?: string;
     urlPago?: string;
     perfilCompletadoReconocido?: boolean;

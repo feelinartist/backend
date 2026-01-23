@@ -1,10 +1,6 @@
 import { z } from 'zod';
 
-// Login schema
-export const loginSchema = z.object({
-    correo: z.string().email('Email inválido'),
-    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres')
-});
+
 
 // Update role schema
 export const updateRoleSchema = z.object({
