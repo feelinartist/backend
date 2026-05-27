@@ -31,7 +31,7 @@ export class ControladorAdminConfig {
 
     async actualizarRedSocial(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const data = req.body;
             const red = await repositorioConfig.actualizarRedSocial(id, data);
             return res.status(200).json(red);
@@ -43,7 +43,7 @@ export class ControladorAdminConfig {
 
     async eliminarRedSocial(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             await repositorioConfig.eliminarRedSocial(id);
             return res.status(200).json({ message: 'Red social eliminada' });
         } catch (error) {
@@ -78,7 +78,7 @@ export class ControladorAdminConfig {
 
     async actualizarMetodoDonacion(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const data = req.body;
             const metodo = await repositorioConfig.actualizarMetodoDonacion(id, data);
             return res.status(200).json(metodo);
@@ -90,7 +90,7 @@ export class ControladorAdminConfig {
 
     async eliminarMetodoDonacion(req: Request, res: Response) {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             await repositorioConfig.eliminarMetodoDonacion(id);
             return res.status(200).json({ message: 'Método de donación eliminado' });
         } catch (error) {

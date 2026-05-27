@@ -124,7 +124,7 @@ export class ControladorUsuario {
 
     async obtenerBloqueados(req: Request, res: Response) {
         try {
-            const { bloqueadorId } = req.params;
+            const bloqueadorId = req.params.bloqueadorId as string;
             if (!bloqueadorId) return res.status(400).json({ message: 'ID de usuario es requerido' });
             const bloqueados = await bloquearUsuarioCasoUso.obtenerBloqueados(bloqueadorId);
             return res.status(200).json(bloqueados);
@@ -315,7 +315,7 @@ export class ControladorUsuario {
 
     async obtenerPerfil(req: Request, res: Response) {
         try {
-            const { usuarioId } = req.params;
+            const usuarioId = req.params.usuarioId as string;
             if (!usuarioId) return res.status(400).json({ message: 'ID de usuario es requerido' });
 
             const usuario = await repositorioUsuario.buscarPorId(usuarioId);
@@ -340,7 +340,7 @@ export class ControladorUsuario {
 
     async obtenerCiudades(req: Request, res: Response) {
         try {
-            const { paisId } = req.params;
+            const paisId = req.params.paisId as string;
             if (!paisId) return res.status(400).json({ message: 'ID de país es requerido' });
             const ciudades = await repositorioUsuario.obtenerCiudades(paisId);
             return res.status(200).json(ciudades);
@@ -371,7 +371,7 @@ export class ControladorUsuario {
 
     async obtenerPerfilPublico(req: Request, res: Response) {
         try {
-            const { username } = req.params;
+            const username = req.params.username as string;
             const { usuarioSolicitanteId } = req.query;
 
             if (!username) return res.status(400).json({ message: 'Nombre de usuario es requerido' });
@@ -395,7 +395,7 @@ export class ControladorUsuario {
                 return res.status(403).json({ message: 'No tienes permisos para realizar esta acción' });
             }
 
-            const { tipo } = req.params;
+            const tipo = req.params.tipo as string;
             const usuarioId = user.id;
 
             if (tipo === 'artista') {

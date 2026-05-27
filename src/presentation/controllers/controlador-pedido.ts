@@ -65,7 +65,7 @@ export class ControladorPedido {
 
     obtenerPedidosPorEvento = async (req: Request, res: Response) => {
         try {
-            const { eventoId } = req.params;
+            const eventoId = req.params.eventoId as string;
             const pedidos = await this.pedidoRepository.obtenerPedidosPorEvento(eventoId);
             return res.json(pedidos);
         } catch (error) {
@@ -76,7 +76,7 @@ export class ControladorPedido {
 
     actualizarEstado = async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const { estado } = req.body;
 
             if (!Object.values(EstadoPedidoCancion).includes(estado)) {

@@ -157,7 +157,14 @@ export class PrismaPedidoRepository {
         // 🛡️ REFACTOR: Write-Behind Pattern using Redis Buffer
         if (pedidoAnterior.titulo && pedidoAnterior.artista && pedidoAnterior.perfilArtistaId) {
             try {
-                await this.bufferEstadisticasRedis(pedidoAnterior, estado);
+                await this.bufferEstadisticasRedis({
+                    estado: pedidoAnterior.estado,
+                    itunesId: pedidoAnterior.itunesId,
+                    titulo: pedidoAnterior.titulo,
+                    artista: pedidoAnterior.artista,
+                    perfilArtistaId: pedidoAnterior.perfilArtistaId,
+                    genero: pedidoAnterior.genero
+                }, estado);
             } catch (error) {
                 console.error("Error buffering stats to Redis:", error);
             }

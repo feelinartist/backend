@@ -14,7 +14,7 @@ export class ControladorEstadisticas {
      */
     obtenerEstadisticasEvento = async (req: Request, res: Response) => {
         try {
-            const { eventoId } = req.params;
+            const eventoId = req.params.eventoId as string;
 
             if (!eventoId) {
                 return res.status(400).json({ error: "EventoId es requerido" });
@@ -40,7 +40,7 @@ export class ControladorEstadisticas {
      */
     obtenerEstadisticasArtista = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
 
             if (!perfilArtistaId) {
                 return res.status(400).json({ error: "PerfilArtistaId es requerido" });
@@ -60,7 +60,7 @@ export class ControladorEstadisticas {
      */
     obtenerGenerosArtista = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
 
             if (!perfilArtistaId) {
                 return res.status(400).json({ error: "PerfilArtistaId es requerido" });
@@ -83,7 +83,7 @@ export class ControladorEstadisticas {
      */
     obtenerTopCanciones = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
             const limit = Number.parseInt(req.query.limit as string) || 20;
 
             if (!perfilArtistaId) {
@@ -107,7 +107,7 @@ export class ControladorEstadisticas {
      */
     obtenerDetalleCancionesArtista = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
             const page = Number.parseInt(req.query.page as string) || 1;
             const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = (req.query.search as string) || '';
@@ -137,7 +137,7 @@ export class ControladorEstadisticas {
      */
     obtenerDetalleCancionesEvento = async (req: Request, res: Response) => {
         try {
-            const { eventoId } = req.params;
+            const eventoId = req.params.eventoId as string;
             const page = Number.parseInt(req.query.page as string) || 1;
             const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = (req.query.search as string) || '';

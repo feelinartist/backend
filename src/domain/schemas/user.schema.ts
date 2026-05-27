@@ -6,11 +6,11 @@ import { z } from 'zod';
 export const updateRoleSchema = z.looseObject({
     correo: z.email({ error: 'Email inválido' }),
     rol: z.enum(['ARTISTA', 'PUBLICO', 'DISCOTECA'], {
-        errorMap: () => ({ message: 'Rol inválido. Debe ser ARTISTA, PUBLICO o DISCOTECA' })
+        error: 'Rol inválido. Debe ser ARTISTA, PUBLICO o DISCOTECA'
     }),
-    datosPerfilArtista: z.record(z.unknown()).optional(),
-    datosPerfilPublico: z.record(z.unknown()).optional(),
-    datosDiscoteca: z.record(z.unknown()).optional(),
+    datosPerfilArtista: z.record(z.string(), z.unknown()).optional(),
+    datosPerfilPublico: z.record(z.string(), z.unknown()).optional(),
+    datosDiscoteca: z.record(z.string(), z.unknown()).optional(),
     nombreUsuario: z.string().optional(),
     nombre: z.string().optional()
 });
@@ -21,9 +21,9 @@ export const updateProfileSchema = z.object({
     nombre: z.string().optional(),
     nombreUsuario: z.string().optional(),
     imagen: z.string().optional(),
-    perfilArtista: z.record(z.unknown()).optional(),
-    perfilPublico: z.record(z.unknown()).optional(),
-    perfilDiscoteca: z.record(z.unknown()).optional(),
+    perfilArtista: z.record(z.string(), z.unknown()).optional(),
+    perfilPublico: z.record(z.string(), z.unknown()).optional(),
+    perfilDiscoteca: z.record(z.string(), z.unknown()).optional(),
     galeria: z.array(z.object({
         urlImagen: z.string()
     })).optional()
