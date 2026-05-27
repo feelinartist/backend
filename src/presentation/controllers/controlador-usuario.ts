@@ -26,8 +26,8 @@ export class ControladorUsuario {
 
     async listarUsuarios(req: Request, res: Response) {
         try {
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const page = Number.parseInt(req.query.page as string) || 1;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
             const termino = req.query.termino as string;
 
             const result = await repositorioUsuario.listarUsuarios(page, limit, termino);
@@ -356,7 +356,7 @@ export class ControladorUsuario {
             if (!usuarioId) return res.status(400).json({ message: 'ID de usuario es requerido' });
 
             // Use provided value or default to true for backward compatibility with existing calls
-            const valor = perfilCompletadoReconocido !== undefined ? perfilCompletadoReconocido : true;
+            const valor = perfilCompletadoReconocido === undefined ? true : perfilCompletadoReconocido;
 
             const usuario = await repositorioUsuario.actualizar(usuarioId, {
                 perfilCompletadoReconocido: valor

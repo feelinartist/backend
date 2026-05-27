@@ -7,7 +7,7 @@ import { SocketService } from '../../infrastructure/services/socket-service';
 const prisma = new PrismaClient();
 
 export class ControladorPedido {
-    private pedidoRepository: PrismaPedidoRepository;
+    private readonly pedidoRepository: PrismaPedidoRepository;
 
     constructor() {
         this.pedidoRepository = new PrismaPedidoRepository();
@@ -35,7 +35,7 @@ export class ControladorPedido {
                 return res.status(403).json({ error: "El artista no está recibiendo pedidos en este momento" });
             }
 
-            const pedido = await this.pedidoRepository.crearPedido(
+            const pedido = await this.pedidoRepository.crearPedido({
                 eventoId,
                 titulo,
                 artista,
@@ -45,7 +45,7 @@ export class ControladorPedido {
                 genero,
                 imagenUrl,
                 previewUrl
-            );
+            });
 
             // Emitir evento por Socket.io
             try {

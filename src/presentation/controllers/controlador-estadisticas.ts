@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { EstadisticasService } from "../../application/services/estadisticas-service";
 
 export class ControladorEstadisticas {
-    private estadisticasService: EstadisticasService;
+    private readonly estadisticasService: EstadisticasService;
 
     constructor() {
         this.estadisticasService = new EstadisticasService();
@@ -84,7 +84,7 @@ export class ControladorEstadisticas {
     obtenerTopCanciones = async (req: Request, res: Response) => {
         try {
             const { perfilArtistaId } = req.params;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
 
             if (!perfilArtistaId) {
                 return res.status(400).json({ error: "PerfilArtistaId es requerido" });
@@ -108,8 +108,8 @@ export class ControladorEstadisticas {
     obtenerDetalleCancionesArtista = async (req: Request, res: Response) => {
         try {
             const { perfilArtistaId } = req.params;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const page = Number.parseInt(req.query.page as string) || 1;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = (req.query.search as string) || '';
             const ordenarPor = (req.query.ordenarPor as "pedidas" | "aceptadas" | "rechazadas" | "recientes") || 'pedidas';
 
@@ -138,8 +138,8 @@ export class ControladorEstadisticas {
     obtenerDetalleCancionesEvento = async (req: Request, res: Response) => {
         try {
             const { eventoId } = req.params;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const page = Number.parseInt(req.query.page as string) || 1;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = (req.query.search as string) || '';
             const ordenarPor = (req.query.ordenarPor as "pedidas" | "aceptadas" | "rechazadas" | "recientes") || 'pedidas';
 

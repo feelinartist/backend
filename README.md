@@ -69,20 +69,20 @@ Once Redis is running, add `REDIS_URL=redis://localhost:6379` to your `.env` fil
 
 1.  **Install dependencies**:
     ```bash
-    npm install
+    pnpm install
     ```
 
 2.  **Run with hot-reload (Development)**:
     ```bash
-    npm run dev
+    pnpm dev
     ```
 
 3.  **Build**:
     ```bash
-    npm run build
+    pnpm build
     ```
 
 4.  **Start Production Server**:
     ```bash
-    npm start
+    pnpm start
     ```

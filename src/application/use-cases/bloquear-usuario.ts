@@ -2,7 +2,7 @@ import { RepositorioUsuario } from "../../domain/repositories/user-repository";
 import { Usuario } from "../../domain/entities/user";
 
 export class BloquearUsuarioCasoUso {
-    constructor(private repositorioUsuario: RepositorioUsuario) { }
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) { }
 
     async bloquear(bloqueadorId: string, bloqueadoId: string): Promise<void> {
         if (bloqueadorId === bloqueadoId) {

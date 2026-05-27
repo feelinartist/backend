@@ -6,6 +6,8 @@
             "es2020"
         ],
         "strict": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
         "forceConsistentCasingInFileNames": true,

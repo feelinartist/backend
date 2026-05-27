@@ -1,6 +1,5 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { Prisma } from "@prisma/client";
+import prisma from "../../infrastructure/database/prisma";
 
 export interface EstadisticasEvento {
     eventoId: string;
@@ -33,6 +32,8 @@ export interface EstadisticasEvento {
         total: number;
     }>;
 }
+
+export type OrdenarCancionesPor = 'pedidas' | 'aceptadas' | 'rechazadas' | 'recientes';
 
 export interface EstadisticasArtista {
     perfilArtistaId: string;
@@ -344,6 +345,88 @@ export class EstadisticasService {
         };
     }
 
+    private async processSongDetails(
+        whereClause: Prisma.PedidoCancionWhereInput,
+        page: number,
+        limit: number,
+        search: string,
+        ordenarPor: OrdenarCancionesPor
+    ) {
+        const songStats = await prisma.pedidoCancion.groupBy({
+            by: ['titulo', 'artista', 'genero', 'estado'],
+            where: whereClause,
+            _count: { id: true },
+            _max: { creadoEn: true }
+        });
+
+        const songMap = new Map<string, {
+            titulo: string;
+            artista: string;
+            genero: string;
+            total: number;
+            aceptados: number;
+            rechazados: number;
+            ultimoPedido: Date;
+        }>();
+
+        songStats.forEach(stat => {
+            const key = `${stat.titulo}||| ${stat.artista} `;
+            if (!songMap.has(key)) {
+                songMap.set(key, {
+                    titulo: stat.titulo || 'Desconocido',
+                    artista: stat.artista || 'Desconocido',
+                    genero: stat.genero || '',
+                    total: 0,
+                    aceptados: 0,
+                    rechazados: 0,
+                    ultimoPedido: new Date(0)
+                });
+            }
+            const s = songMap.get(key)!;
+            const count = stat._count.id;
+            s.total += count;
+            if (stat.estado === 'ACEPTADO') s.aceptados += count;
+            if (stat.estado === 'RECHAZADO') s.rechazados += count;
+
+            if (stat._max.creadoEn && stat._max.creadoEn > s.ultimoPedido) {
+                s.ultimoPedido = stat._max.creadoEn;
+            }
+        });
+
+        let allSongs = Array.from(songMap.values());
+
+        if (search) {
+            const searchLower = search.toLowerCase();
+            allSongs = allSongs.filter(s =>
+                s.titulo?.toLowerCase().includes(searchLower) ||
+                s.artista?.toLowerCase().includes(searchLower)
+            );
+        }
+
+        allSongs.sort((a, b) => {
+            switch (ordenarPor) {
+                case 'aceptadas': return b.aceptados - a.aceptados;
+                case 'rechazadas': return b.rechazados - a.rechazados;
+                case 'recientes': return b.ultimoPedido.getTime() - a.ultimoPedido.getTime();
+                case 'pedidas':
+                default:
+                    return b.total - a.total;
+            }
+        });
+
+        const totalItems = allSongs.length;
+        const totalPages = Math.ceil(totalItems / limit);
+        const startIndex = (page - 1) * limit;
+        const paginatedSongs = allSongs.slice(startIndex, startIndex + limit);
+
+        return {
+            canciones: paginatedSongs,
+            total: totalItems,
+            page,
+            totalPages
+        };
+    }
+
     /**
      * Obtiene el detalle paginado de canciones de un artista
      */
@@ -352,7 +435,7 @@ export class EstadisticasService {
         page: number = 1,
         limit: number = 20,
         search: string = '',
-        ordenarPor: 'pedidas' | 'aceptadas' | 'rechazadas' | 'recientes' = 'pedidas'
+        ordenarPor: OrdenarCancionesPor = 'pedidas'
     ) {
         // 1. Obtener eventos del artista
         const eventosArtist = await prisma.evento.findMany({
@@ -371,89 +454,11 @@ export class EstadisticasService {
             };
         }
 
-        // 2. Agrupar pedidos por canción
-        // Prisma no soporta paginación + groupBy + ordenamiento complejo nativamente de forma sencilla
         const whereClause: Prisma.PedidoCancionWhereInput = {
             eventoId: { in: eventoIds }
         };
 
-        const songStats = await prisma.pedidoCancion.groupBy({
-            by: ['titulo', 'artista', 'genero', 'estado'],
-            where: whereClause,
-            _count: { id: true },
-            _max: { creadoEn: true }
-        });
-
-        // 3. Procesar y unificar
-        const songMap = new Map<string, {
-            titulo: string;
-            artista: string;
-            genero: string;
-            total: number;
-            aceptados: number;
-            rechazados: number;
-            ultimoPedido: Date;
-        }>();
-
-        songStats.forEach(stat => {
-            const key = `${stat.titulo}||| ${stat.artista} `;
-            if (!songMap.has(key)) {
-                songMap.set(key, {
-                    titulo: stat.titulo || 'Desconocido',
-                    artista: stat.artista || 'Desconocido',
-                    genero: stat.genero || '',
-                    total: 0,
-                    aceptados: 0,
-                    rechazados: 0,
-                    ultimoPedido: new Date(0)
-                });
-            }
-            const s = songMap.get(key)!;
-            const count = stat._count.id;
-            s.total += count;
-            if (stat.estado === 'ACEPTADO') s.aceptados += count;
-            if (stat.estado === 'RECHAZADO') s.rechazados += count;
-
-            if (stat._max.creadoEn && stat._max.creadoEn > s.ultimoPedido) {
-                s.ultimoPedido = stat._max.creadoEn;
-            }
-        });
-
-        let allSongs = Array.from(songMap.values());
-
-        // 4. Filtrado adicional
-        if (search) {
-            const searchLower = search.toLowerCase();
-            allSongs = allSongs.filter(s =>
-                s.titulo?.toLowerCase().includes(searchLower) ||
-                s.artista?.toLowerCase().includes(searchLower)
-            );
-        }
-
-        // 5. Ordenamiento
-        allSongs.sort((a, b) => {
-            switch (ordenarPor) {
-                case 'aceptadas': return b.aceptados - a.aceptados;
-                case 'rechazadas': return b.rechazados - a.rechazados;
-                case 'recientes': return b.ultimoPedido.getTime() - a.ultimoPedido.getTime();
-                case 'pedidas':
-                default:
-                    return b.total - a.total;
-            }
-        });
-
-        // 6. Paginación
-        const totalItems = allSongs.length;
-        const totalPages = Math.ceil(totalItems / limit);
-        const startIndex = (page - 1) * limit;
-        const paginatedSongs = allSongs.slice(startIndex, startIndex + limit);
-
-        return {
-            canciones: paginatedSongs,
-            total: totalItems,
-            page,
-            totalPages
-        };
+        return this.processSongDetails(whereClause, page, limit, search, ordenarPor);
     }
 
     /**
@@ -464,83 +469,12 @@ export class EstadisticasService {
         page: number = 1,
         limit: number = 20,
         search: string = '',
-        ordenarPor: 'pedidas' | 'aceptadas' | 'rechazadas' | 'recientes' = 'pedidas'
+        ordenarPor: OrdenarCancionesPor = 'pedidas'
     ) {
         const whereClause: Prisma.PedidoCancionWhereInput = {
             eventoId: eventoId
         };
 
-        const songStats = await prisma.pedidoCancion.groupBy({
-            by: ['titulo', 'artista', 'genero', 'estado'],
-            where: whereClause,
-            _count: { id: true },
-            _max: { creadoEn: true }
-        });
-
-        const songMap = new Map<string, {
-            titulo: string;
-            artista: string;
-            genero: string;
-            total: number;
-            aceptados: number;
-            rechazados: number;
-            ultimoPedido: Date;
-        }>();
-
-        songStats.forEach(stat => {
-            const key = `${stat.titulo}||| ${stat.artista} `;
-            if (!songMap.has(key)) {
-                songMap.set(key, {
-                    titulo: stat.titulo || 'Desconocido',
-                    artista: stat.artista || 'Desconocido',
-                    genero: stat.genero || '',
-                    total: 0,
-                    aceptados: 0,
-                    rechazados: 0,
-                    ultimoPedido: new Date(0)
-                });
-            }
-            const s = songMap.get(key)!;
-            const count = stat._count.id;
-            s.total += count;
-            if (stat.estado === 'ACEPTADO') s.aceptados += count;
-            if (stat.estado === 'RECHAZADO') s.rechazados += count;
-            if (stat._max.creadoEn && stat._max.creadoEn > s.ultimoPedido) {
-                s.ultimoPedido = stat._max.creadoEn;
-            }
-        });
-
-        let allSongs = Array.from(songMap.values());
-
-        if (search) {
-            const searchLower = search.toLowerCase();
-            allSongs = allSongs.filter(s =>
-                s.titulo?.toLowerCase().includes(searchLower) ||
-                s.artista?.toLowerCase().includes(searchLower)
-            );
-        }
-
-        allSongs.sort((a, b) => {
-            switch (ordenarPor) {
-                case 'aceptadas': return b.aceptados - a.aceptados;
-                case 'rechazadas': return b.rechazados - a.rechazados;
-                case 'recientes': return b.ultimoPedido.getTime() - a.ultimoPedido.getTime();
-                case 'pedidas':
-                default:
-                    return b.total - a.total;
-            }
-        });
-
-        const totalItems = allSongs.length;
-        const totalPages = Math.ceil(totalItems / limit);
-        const startIndex = (page - 1) * limit;
-        const paginatedSongs = allSongs.slice(startIndex, startIndex + limit);
-
-        return {
-            canciones: paginatedSongs,
-            total: totalItems,
-            page,
-            totalPages
-        };
+        return this.processSongDetails(whereClause, page, limit, search, ordenarPor);
     }
 }

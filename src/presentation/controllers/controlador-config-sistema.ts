@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaConfigSistemaRepository } from "../../infrastructure/repositories/prisma-config-sistema-repository";
 
 export class ControladorConfigSistema {
-    private configRepository: PrismaConfigSistemaRepository;
+    private readonly configRepository: PrismaConfigSistemaRepository;
 
     constructor() {
         this.configRepository = new PrismaConfigSistemaRepository();

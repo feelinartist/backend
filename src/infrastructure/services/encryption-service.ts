@@ -1,10 +1,10 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production-32b'; // Must be 32 bytes
 const ALGORITHM = 'aes-256-gcm';
 
 export class EncryptionService {
-    private key: Buffer;
+    private readonly key: Buffer;
 
     constructor() {
         // Ensure key is exactly 32 bytes

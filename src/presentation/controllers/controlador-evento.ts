@@ -4,7 +4,7 @@ import { PrismaEventoRepository } from "../../infrastructure/repositories/prisma
 import { SocketService } from "../../infrastructure/services/socket-service";
 
 export class ControladorEvento {
-    private eventoRepository: PrismaEventoRepository;
+    private readonly eventoRepository: PrismaEventoRepository;
 
     constructor() {
         this.eventoRepository = new PrismaEventoRepository();
@@ -145,8 +145,8 @@ export class ControladorEvento {
     obtenerEventosPaginados = async (req: Request, res: Response) => {
         try {
             const { perfilArtistaId } = req.params;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const page = Number.parseInt(req.query.page as string) || 1;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = req.query.search as string;
 
             const result = await this.eventoRepository.obtenerEventosPaginados(perfilArtistaId, page, limit, search);

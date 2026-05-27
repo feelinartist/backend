@@ -4,17 +4,19 @@ import { redisService } from "../services/redis-service";
 const prisma = new PrismaClient();
 
 export class PrismaPedidoRepository {
-    async crearPedido(
-        eventoId: string,
-        titulo: string,
-        artista?: string,
-        usuarioId?: string,
-        itunesId?: string,
-        nombreSolicitante?: string,
-        genero?: string,
-        imagenUrl?: string,
-        previewUrl?: string
-    ) {
+    async crearPedido(datos: {
+        eventoId: string;
+        titulo: string;
+        artista?: string;
+        usuarioId?: string;
+        itunesId?: string;
+        nombreSolicitante?: string;
+        genero?: string;
+        imagenUrl?: string;
+        previewUrl?: string;
+    }) {
+        const { eventoId, titulo, artista, usuarioId, itunesId, nombreSolicitante, genero, imagenUrl, previewUrl } = datos;
+
         // Obtener perfilArtistaId del evento
         const evento = await prisma.evento.findUnique({
             where: { id: eventoId },
@@ -75,10 +77,6 @@ export class PrismaPedidoRepository {
         } catch (err) {
             console.warn('Error updating popularity ranking in Redis:', err);
         }
-
-        // 5. Async Stats: We don't write to MySQL EstadisticasCancion here anymore.
-        // We rely on 'actualizarEstado' to increment counters in Redis buffer.
-        // The song is already in Redis 'popularity_ranking' (ZSET) for immediate top lists.
 
         return pedido;
     }
@@ -150,76 +148,75 @@ export class PrismaPedidoRepository {
         // 🛡️ Redis: Limpieza de la Cola Viva y actualización de contadores
         if (pedidoAnterior.perfilArtistaId && pedidoAnterior.eventoId) {
             try {
-                // Si ya no es PENDIENTE, lo quitamos de la cola viva y del ranking de Redis
-                if (estado !== 'PENDIENTE') {
-                    // 1. Quitar de la cola cronológica usando Shadow Key
-                    const shadowKey = `request:payload:${id}`;
-                    const payload = await redisService.get(shadowKey);
-
-                    if (payload) {
-                        await redisService.zrem(`event:${pedidoAnterior.eventoId}:live_queue`, payload);
-                        await redisService.del(shadowKey); // Cleanup shadow key
-                    } else {
-                        // Fallback: If payload lost (TTL), we might have a ghost in the queue.
-                        // The frontend usually filters by ID, but ZREM is cleaner.
-                        console.warn(`[Redis] Shadow key missing for cleanup: ${shadowKey}`);
-                    }
-
-                    // 2. Quitar del ranking de popularidad?
-                    // No, usually we want to keep it in the "Most Voted" list even if processed?
-                    // User requirement: "aceptar, rechazar". Usually "Accepted" songs might stay in "Now Playing" or similar.
-                    // "Rejected" definitely go away.
-                    // For now, let's leave Ranking as is (it's "Popularity", not "Pending List").
-                }
-
-                // (Old synchronous Redis counters removed in favor of Async Stats below)
+                await this.limpiarColaVivaRedis(id, pedidoAnterior.eventoId, estado);
             } catch (error) {
                 console.warn("Error cleaning up Redis queue:", error);
             }
         }
 
         // 🛡️ REFACTOR: Write-Behind Pattern using Redis Buffer
-        // Instead of writing to MySQL immediately, we increment counters in Redis.
-        // The Worker (stats-sync-service) will persist this later.
-
         if (pedidoAnterior.titulo && pedidoAnterior.artista && pedidoAnterior.perfilArtistaId) {
             try {
-                // Use a stable ID (iTunes ID or generated one)
-                const itunesKey = pedidoAnterior.itunesId || `manual_${pedidoAnterior.titulo}_${pedidoAnterior.artista}`;
-                const bufferKey = `stats:buffer:${itunesKey}`;
-
-                // Metadata to allow the worker to create the record if missing
-                // Use HSETNX to set these only if they don't exist (save bandwidth/ops)
-                await redisService.hsetnx(bufferKey, 'perfilArtistaId', pedidoAnterior.perfilArtistaId);
-                await redisService.hsetnx(bufferKey, 'titulo', pedidoAnterior.titulo);
-                await redisService.hsetnx(bufferKey, 'artista', pedidoAnterior.artista);
-                if (pedidoAnterior.genero) await redisService.hsetnx(bufferKey, 'genero', pedidoAnterior.genero);
-
-                const estadoNuevo = estado;
-                const estadoAnterior = pedidoAnterior.estado;
-
-                // Decrement old status (if applicable) -> To keep stats accurate if I switch Accept->Reject
-                // Note: The worker handles negatives? Yes.
-                if (estadoAnterior === 'ACEPTADO') {
-                    await redisService.hincrby(bufferKey, 'accepted', -1);
-                } else if (estadoAnterior === 'RECHAZADO') {
-                    await redisService.hincrby(bufferKey, 'rejected', -1);
-                }
-
-                // Increment new status
-                if (estadoNuevo === 'ACEPTADO') {
-                    await redisService.hincrby(bufferKey, 'accepted', 1);
-                } else if (estadoNuevo === 'RECHAZADO') {
-                    await redisService.hincrby(bufferKey, 'rejected', 1);
-                }
-
+                await this.bufferEstadisticasRedis(pedidoAnterior, estado);
             } catch (error) {
                 console.error("Error buffering stats to Redis:", error);
-                // Fallback: If Redis fails, we COULD try direct DB write, but let's keep it simple for now.
-                // Critical failure in Redis means stats might lag, but order processing continues.
             }
         }
 
         return pedido;
+    }
+
+    private async limpiarColaVivaRedis(pedidoId: string, eventoId: string, estado: EstadoPedidoCancion): Promise<void> {
+        // Si ya no es PENDIENTE, lo quitamos de la cola viva y del ranking de Redis
+        if (estado !== 'PENDIENTE') {
+            const shadowKey = `request:payload:${pedidoId}`;
+            const payload = await redisService.get(shadowKey);
+
+            if (payload) {
+                await redisService.zrem(`event:${eventoId}:live_queue`, payload);
+                await redisService.del(shadowKey); // Cleanup shadow key
+            } else {
+                console.warn(`[Redis] Shadow key missing for cleanup: ${shadowKey}`);
+            }
+        }
+    }
+
+    private async bufferEstadisticasRedis(
+        pedidoAnterior: {
+            estado: EstadoPedidoCancion;
+            itunesId: string | null;
+            titulo: string;
+            artista: string;
+            perfilArtistaId: string;
+            genero: string | null;
+        },
+        estadoNuevo: EstadoPedidoCancion
+    ): Promise<void> {
+        const itunesKey = pedidoAnterior.itunesId || `manual_${pedidoAnterior.titulo}_${pedidoAnterior.artista}`;
+        const bufferKey = `stats:buffer:${itunesKey}`;
+
+        // Metadata to allow the worker to create the record if missing
+        await redisService.hsetnx(bufferKey, 'perfilArtistaId', pedidoAnterior.perfilArtistaId);
+        await redisService.hsetnx(bufferKey, 'titulo', pedidoAnterior.titulo);
+        await redisService.hsetnx(bufferKey, 'artista', pedidoAnterior.artista);
+        if (pedidoAnterior.genero) {
+            await redisService.hsetnx(bufferKey, 'genero', pedidoAnterior.genero);
+        }
+
+        const estadoAnterior = pedidoAnterior.estado;
+
+        // Decrement old status (if applicable)
+        if (estadoAnterior === 'ACEPTADO') {
+            await redisService.hincrby(bufferKey, 'accepted', -1);
+        } else if (estadoAnterior === 'RECHAZADO') {
+            await redisService.hincrby(bufferKey, 'rejected', -1);
+        }
+
+        // Increment new status
+        if (estadoNuevo === 'ACEPTADO') {
+            await redisService.hincrby(bufferKey, 'accepted', 1);
+        } else if (estadoNuevo === 'RECHAZADO') {
+            await redisService.hincrby(bufferKey, 'rejected', 1);
+        }
     }
 }

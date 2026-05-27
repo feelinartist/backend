@@ -1,7 +1,8 @@
 import { RepositorioUsuario } from '../../domain/repositories/user-repository';
+import crypto from 'node:crypto';
 
 export class VerificarDisponibilidadUsuarioCasoUso {
-    constructor(private repositorioUsuario: RepositorioUsuario) { }
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) { }
 
     async ejecutar(nombreUsuario: string): Promise<{ disponible: boolean; sugerencias: string[] }> {
         const usuarioExistente = await this.repositorioUsuario.buscarPorNombreUsuario(nombreUsuario);
@@ -33,7 +34,7 @@ export class VerificarDisponibilidadUsuarioCasoUso {
         // 2. Fill remaining slots with random number suffixes (guaranteed to find available ones)
         let intentos = 0;
         while (sugerencias.length < 3 && intentos < 20) {
-            const randomNum = Math.floor(Math.random() * 10000);
+            const randomNum = crypto.randomInt(0, 10000);
             // Format: name_1234 (requested format: random number with underscore)
             const candidato = `${nombreBase}_${randomNum}`;
 
