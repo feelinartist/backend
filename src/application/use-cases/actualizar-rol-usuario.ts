@@ -7,10 +7,10 @@ import { QrService } from '../../infrastructure/services/qr-service';
 import { configService } from '../../infrastructure/services/config-service';
 
 export class ActualizarRolUsuarioCasoUso {
-    private localFileService: LocalFileService;
-    private qrService: QrService;
+    private readonly localFileService: LocalFileService;
+    private readonly qrService: QrService;
 
-    constructor(private repositorioUsuario: RepositorioUsuario) {
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) {
         this.localFileService = new LocalFileService();
         this.qrService = new QrService();
     }
@@ -25,7 +25,7 @@ export class ActualizarRolUsuarioCasoUso {
             try {
                 const username = nombreUsuario || usuario.nombreUsuario;
                 if (username) {
-                    const frontendUrl = await configService.get('FRONTEND_URL', 'http://localhost:3000');
+                    const frontendUrl = await configService.get('FRONTEND_URL', 'https://localhost:3000');
                     const profileUrl = `${frontendUrl}/artist/${username}/music`;
                     const qrBuffer = await this.qrService.generateQrCode(profileUrl);
 
@@ -37,7 +37,7 @@ export class ActualizarRolUsuarioCasoUso {
                     const result = await this.localFileService.uploadBase64Image(qrBase64, usuario.id, 'music', 'qr');
                     const qrUrl = result.url;
 
-                    if (!datosPerfilArtista) datosPerfilArtista = {};
+                    datosPerfilArtista ??= {};
                     datosPerfilArtista.musicQR = qrUrl;   // New field name in Prisma
                 }
             } catch (error) {

@@ -14,7 +14,7 @@ const devBypass = (req: Request, res: Response, next: NextFunction) => next();
  * Redis is still connecting during server startup.
  */
 class DynamicStore implements Store {
-    private localStore = new MemoryStore();
+    private readonly localStore = new MemoryStore();
     private redisStore?: RedisStore;
     private options?: Options;
     public prefix?: string;
@@ -36,7 +36,7 @@ class DynamicStore implements Store {
                     this.redisStore = new RedisStore({
                         sendCommand: (async (...args: string[]) => {
                             // @ts-expect-error - ioredis call signature compatibility
-                            return (await client.call(...args)) as unknown;
+                            return await client.call(...args);
                         }) as any,
                         prefix: this.prefix,
                     });

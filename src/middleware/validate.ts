@@ -13,7 +13,7 @@ export const validate = (schema: z.ZodSchema) => {
             if (error instanceof z.ZodError) {
                 return res.status(400).json({
                     message: 'Error de validación',
-                    errors: error.errors.map(err => ({
+                    errors: error.issues.map((err) => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))
@@ -36,7 +36,7 @@ export const validateQuery = (schema: z.ZodSchema) => {
             if (error instanceof z.ZodError) {
                 return res.status(400).json({
                     message: 'Error de validación en parámetros',
-                    errors: error.errors.map(err => ({
+                    errors: error.issues.map((err) => ({
                         field: err.path.join('.'),
                         message: err.message
                     }))

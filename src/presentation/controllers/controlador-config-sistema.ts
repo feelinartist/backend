@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { PrismaConfigSistemaRepository } from "../../infrastructure/repositories/prisma-config-sistema-repository";
 
 export class ControladorConfigSistema {
-    private configRepository: PrismaConfigSistemaRepository;
+    private readonly configRepository: PrismaConfigSistemaRepository;
 
     constructor() {
         this.configRepository = new PrismaConfigSistemaRepository();
@@ -32,7 +32,7 @@ export class ControladorConfigSistema {
 
     obtenerPorClave = async (req: Request, res: Response) => {
         try {
-            const { clave } = req.params;
+            const clave = req.params.clave as string;
             const config = await this.configRepository.obtenerPorClave(clave);
 
             if (!config) {
@@ -77,7 +77,7 @@ export class ControladorConfigSistema {
 
     actualizar = async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const { valor } = req.body;
             const userId = (req as Request & { user?: { id: string } }).user?.id;
 
@@ -95,7 +95,7 @@ export class ControladorConfigSistema {
 
     eliminar = async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             await this.configRepository.eliminar(id);
             return res.json({ message: "Configuración eliminada correctamente" });
         } catch (error) {

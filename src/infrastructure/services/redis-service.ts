@@ -6,12 +6,13 @@ export class RedisService {
     private isConnected: boolean = false;
 
     private constructor() {
-        this.initializeClient();
+        // Asynchronous initialization moved to getInstance()
     }
 
     public static getInstance(): RedisService {
         if (!RedisService.instance) {
             RedisService.instance = new RedisService();
+            RedisService.instance.initializeClient();
         }
         return RedisService.instance;
     }
@@ -151,7 +152,7 @@ export class RedisService {
             for (let i = 0; i < results.length; i += 2) {
                 formatted.push({
                     member: results[i],
-                    score: parseFloat(results[i + 1])
+                    score: Number.parseFloat(results[i + 1])
                 });
             }
             return formatted;

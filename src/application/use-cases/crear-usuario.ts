@@ -1,8 +1,9 @@
 import { RepositorioUsuario } from '../../domain/repositories/user-repository';
 import { Usuario, CrearUsuarioDTO } from '../../domain/entities/user';
+import crypto from 'node:crypto';
 
 export class CrearUsuarioCasoUso {
-    constructor(private repositorioUsuario: RepositorioUsuario) { }
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) { }
 
     async ejecutar(datos: CrearUsuarioDTO): Promise<Usuario> {
         const usuarioExistente = await this.repositorioUsuario.buscarPorCorreo(datos.correo);
@@ -32,19 +33,24 @@ export class CrearUsuarioCasoUso {
         // Generate unique username if not provided
         let nombreUsuario = datos.nombreUsuario;
         if (!nombreUsuario) {
-            const base = (datos.nombre || datos.correo.split('@')[0])
-                .toLowerCase()
-                .replace(/[^a-z0-9]/g, '');
-
-            nombreUsuario = base;
-            let contador = 1;
-            while (await this.repositorioUsuario.buscarPorNombreUsuario(nombreUsuario)) {
-                nombreUsuario = `${base}${Math.floor(Math.random() * 10000)}`;
-                contador++;
-                if (contador > 10) break; // Safety break
-            }
+            nombreUsuario = await this.generarNombreUsuarioUnico(datos);
         }
 
         return this.repositorioUsuario.crear({ ...datos, nombreUsuario });
+    }
+
+    private async generarNombreUsuarioUnico(datos: CrearUsuarioDTO): Promise<string> {
+        const base = (datos.nombre || datos.correo.split('@')[0])
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+
+        let nombreUsuario = base;
+        let contador = 1;
+        while (await this.repositorioUsuario.buscarPorNombreUsuario(nombreUsuario)) {
+            nombreUsuario = `${base}${crypto.randomInt(0, 10000)}`;
+            contador++;
+            if (contador > 10) break; // Safety break
+        }
+        return nombreUsuario;
     }
 }

@@ -2,7 +2,7 @@ import { RepositorioUsuario } from "../../domain/repositories/user-repository";
 import { Usuario } from "../../domain/entities/user";
 
 export class GestionCuentaCasoUso {
-    constructor(private repositorioUsuario: RepositorioUsuario) { }
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) { }
 
     async deshabilitarCuenta(usuarioId: string): Promise<Usuario> {
         const usuario = await this.repositorioUsuario.buscarPorId(usuarioId);
@@ -46,11 +46,14 @@ export class GestionCuentaCasoUso {
         } as any); // Type cast due to possible enum lag in generated types
     }
 
-    async ejecutar(usuarioId: string, _accion: 'suspender' | 'activar' | 'eliminar', _motivo?: string): Promise<void> {
-        const usuario = await this.repositorioUsuario.buscarPorId(usuarioId);
-        if (!usuario) throw new Error("Usuario no encontrado");
-
-        await this.repositorioUsuario.eliminarPermanente(usuarioId);
+    async ejecutar(usuarioId: string, accion: 'suspender' | 'activar' | 'eliminar', _motivo?: string): Promise<void> {
+        if (accion === 'suspender') {
+            await this.deshabilitarCuenta(usuarioId);
+        } else if (accion === 'activar') {
+            await this.reactivarCuenta(usuarioId);
+        } else if (accion === 'eliminar') {
+            await this.eliminarUsuarioPermanente(usuarioId);
+        }
     }
 
     async eliminarUsuarioPermanente(usuarioId: string): Promise<void> {

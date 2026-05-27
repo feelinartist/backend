@@ -3,7 +3,7 @@ import { RepositorioConfig } from '../../domain/repositories/config-repository';
 import { Rol } from '../../domain/entities/user';
 
 export class RepositorioConfigPrisma implements RepositorioConfig {
-    private prisma: PrismaClient;
+    private readonly prisma: PrismaClient;
 
     constructor() {
         this.prisma = new PrismaClient();

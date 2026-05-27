@@ -4,7 +4,7 @@ import { PrismaEventoRepository } from "../../infrastructure/repositories/prisma
 import { SocketService } from "../../infrastructure/services/socket-service";
 
 export class ControladorEvento {
-    private eventoRepository: PrismaEventoRepository;
+    private readonly eventoRepository: PrismaEventoRepository;
 
     constructor() {
         this.eventoRepository = new PrismaEventoRepository();
@@ -51,7 +51,7 @@ export class ControladorEvento {
 
     finalizarEvento = async (req: Request, res: Response) => {
         try {
-            const { id } = req.params;
+            const id = req.params.id as string;
             const evento = await this.eventoRepository.finalizarEvento(id);
 
             // Notify via Socket.io
@@ -79,7 +79,7 @@ export class ControladorEvento {
 
     obtenerEventoActivo = async (req: Request, res: Response) => {
         try {
-            const { artistaId } = req.params;
+            const artistaId = req.params.artistaId as string;
             const evento = await this.eventoRepository.obtenerEventoActivo(artistaId);
             return res.json(evento || null); // Return null if no active event
         } catch (error) {
@@ -133,7 +133,7 @@ export class ControladorEvento {
 
     obtenerEventosPorArtista = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
             const eventos = await this.eventoRepository.obtenerEventosPorArtista(perfilArtistaId);
             return res.json(eventos);
         } catch (error) {
@@ -144,9 +144,9 @@ export class ControladorEvento {
 
     obtenerEventosPaginados = async (req: Request, res: Response) => {
         try {
-            const { perfilArtistaId } = req.params;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 20;
+            const perfilArtistaId = req.params.perfilArtistaId as string;
+            const page = Number.parseInt(req.query.page as string) || 1;
+            const limit = Number.parseInt(req.query.limit as string) || 20;
             const search = req.query.search as string;
 
             const result = await this.eventoRepository.obtenerEventosPaginados(perfilArtistaId, page, limit, search);

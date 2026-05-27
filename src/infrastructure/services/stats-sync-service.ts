@@ -69,8 +69,8 @@ export class StatsSyncService {
                 const artista = await redisService.hget(key, 'artista');
                 const genero = await redisService.hget(key, 'genero');
 
-                const accepted = parseInt(acceptedStr || '0', 10);
-                const rejected = parseInt(rejectedStr || '0', 10);
+                const accepted = Number.parseInt(acceptedStr || '0', 10);
+                const rejected = Number.parseInt(rejectedStr || '0', 10);
 
                 if (accepted === 0 && rejected === 0) {
                     // Nothing new, maybe just clean up?

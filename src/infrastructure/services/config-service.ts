@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 const encryptionService = new EncryptionService();
 
 class ConfigService {
-    private cache: Map<string, string> = new Map();
-    private cacheExpiry: Map<string, number> = new Map();
-    private CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+    private readonly cache: Map<string, string> = new Map();
+    private readonly cacheExpiry: Map<string, number> = new Map();
+    private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutos
 
     // Lista explícita de claves que están encriptadas
     private readonly CLAVES_ENCRIPTADAS = [

@@ -1,11 +1,11 @@
 import sharp from 'sharp';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 
 export class LocalFileService {
-    private uploadDir: string;
-    private baseUrl: string;
+    private readonly uploadDir: string;
+    private readonly baseUrl: string;
 
     constructor() {
         this.uploadDir = path.join(process.cwd(), 'uploads');
@@ -33,11 +33,13 @@ export class LocalFileService {
     async uploadBase64Image(base64Image: string, userId: string, type: 'gallery' | 'payment' | 'profile' | 'music', filename?: string): Promise<{ url: string; publicId: string }> {
         try {
             // 1. Remove header data:image/jpeg;base64,
-            const matches = base64Image.match(/^data:([A-Za-z-+/]+);base64,(.+)$/);
+            const regexHeader = /^data:([A-Za-z-+/]+);base64,(.+)$/;
+            const matches = regexHeader.exec(base64Image);
 
-            if (!matches || matches.length !== 3) {
+            if (matches?.length !== 3) {
                 // If no header, assume raw base64
-                if (!base64Image.match(/^[A-Za-z0-9+/=]+$/)) {
+                const regexBase64 = /^[A-Za-z0-9+/=]+$/;
+                if (!regexBase64.exec(base64Image)) {
                     throw new Error('Invalid base64 string');
                 }
             }

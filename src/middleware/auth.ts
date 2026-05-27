@@ -39,7 +39,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
     try {
         const authHeader = req.headers.authorization;
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        if (!authHeader?.startsWith('Bearer ')) {
             return res.status(401).json({ message: 'No se proporcionó token de autenticación' });
         }
 

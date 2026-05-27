@@ -2,7 +2,7 @@ import { RepositorioUsuario } from "../../domain/repositories/user-repository";
 import { Usuario } from "../../domain/entities/user";
 
 export class MigrarRolUsuarioCasoUso {
-    constructor(private repositorioUsuario: RepositorioUsuario) { }
+    constructor(private readonly repositorioUsuario: RepositorioUsuario) { }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async ejecutar(usuarioId: string, nuevoRol: string, datosPerfil: any): Promise<Usuario> {
@@ -22,55 +22,63 @@ export class MigrarRolUsuarioCasoUso {
 
         // Validate and prepare data based on new role
         if (nuevoRol === 'ARTISTA') {
-            // Check if profile exists or if data is provided
-            if (!usuario.perfilArtista && (!datosPerfil.nombreArtistico || !datosPerfil.categoria || !datosPerfil.ciudad || !datosPerfil.pais)) {
-                throw new Error("Faltan datos requeridos para el perfil de Artista (nombreArtistico, categoria, ciudad, pais)");
-            }
-
-            // Map nombreArtistico to Usuario.nombre
-            if (datosPerfil.nombreArtistico) {
-                datosActualizacion.nombre = datosPerfil.nombreArtistico;
-                delete datosPerfil.nombreArtistico;
-            }
-
-            datosActualizacion.perfilArtista = {
-                usuarioId,
-                ...datosPerfil
-            };
+            this.validateAndPrepareArtistMigration(datosPerfil, datosActualizacion, usuario, usuarioId);
         } else if (nuevoRol === 'DISCOTECA') {
-            if (!usuario.perfilDiscoteca && (!datosPerfil.nombre || !datosPerfil.ciudad || !datosPerfil.pais)) {
-                throw new Error("Faltan datos requeridos para el perfil de Discoteca (nombre, ciudad, pais)");
-            }
-
-            // Map nombre to Usuario.nombre
-            if (datosPerfil.nombre) {
-                datosActualizacion.nombre = datosPerfil.nombre;
-                delete datosPerfil.nombre;
-            }
-
-            datosActualizacion.perfilDiscoteca = {
-                usuarioId,
-                ...datosPerfil
-            };
+            this.validateAndPrepareDiscotecaMigration(datosPerfil, datosActualizacion, usuario, usuarioId);
         } else if (nuevoRol === 'PUBLICO') {
-            if (!usuario.perfilPublico && (!datosPerfil.ciudad || !datosPerfil.pais)) {
-                throw new Error("Faltan datos requeridos para el perfil Público (ciudad, pais)");
-            }
-
-            // Map nombreCompleto to Usuario.nombre if provided (though usually Public profile uses existing name)
-            if (datosPerfil.nombreCompleto) {
-                datosActualizacion.nombre = datosPerfil.nombreCompleto;
-                delete datosPerfil.nombreCompleto;
-            }
-
-            datosActualizacion.perfilPublico = {
-                usuarioId,
-                ...datosPerfil
-            };
+            this.validateAndPreparePublicoMigration(datosPerfil, datosActualizacion, usuario, usuarioId);
         } else {
             throw new Error("Rol no válido para migración");
         }
 
         return this.repositorioUsuario.actualizar(usuarioId, datosActualizacion);
+    }
+
+    private validateAndPrepareArtistMigration(datosPerfil: any, datosActualizacion: any, usuario: Usuario, usuarioId: string): void {
+        if (!usuario.perfilArtista && (!datosPerfil?.nombreArtistico || !datosPerfil?.categoria || !datosPerfil?.ciudad || !datosPerfil?.pais)) {
+            throw new Error("Faltan datos requeridos para el perfil de Artista (nombreArtistico, categoria, ciudad, pais)");
+        }
+
+        if (datosPerfil?.nombreArtistico) {
+            datosActualizacion.nombre = datosPerfil.nombreArtistico;
+            delete datosPerfil.nombreArtistico;
+        }
+
+        datosActualizacion.perfilArtista = {
+            usuarioId,
+            ...datosPerfil
+        };
+    }
+
+    private validateAndPrepareDiscotecaMigration(datosPerfil: any, datosActualizacion: any, usuario: Usuario, usuarioId: string): void {
+        if (!usuario.perfilDiscoteca && (!datosPerfil?.nombre || !datosPerfil?.ciudad || !datosPerfil?.pais)) {
+            throw new Error("Faltan datos requeridos para el perfil de Discoteca (nombre, ciudad, pais)");
+        }
+
+        if (datosPerfil?.nombre) {
+            datosActualizacion.nombre = datosPerfil.nombre;
+            delete datosPerfil.nombre;
+        }
+
+        datosActualizacion.perfilDiscoteca = {
+            usuarioId,
+            ...datosPerfil
+        };
+    }
+
+    private validateAndPreparePublicoMigration(datosPerfil: any, datosActualizacion: any, usuario: Usuario, usuarioId: string): void {
+        if (!usuario.perfilPublico && (!datosPerfil?.ciudad || !datosPerfil?.pais)) {
+            throw new Error("Faltan datos requeridos para el perfil Público (ciudad, pais)");
+        }
+
+        if (datosPerfil?.nombreCompleto) {
+            datosActualizacion.nombre = datosPerfil.nombreCompleto;
+            delete datosPerfil.nombreCompleto;
+        }
+
+        datosActualizacion.perfilPublico = {
+            usuarioId,
+            ...datosPerfil
+        };
     }
 }
