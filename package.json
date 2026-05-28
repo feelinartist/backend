@@ -10,7 +10,8 @@
     "start": "node dist/src/main.js",
     "lint": "eslint src/**/*.ts",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage && node scripts/fix-lcov-paths.js"
+    "test:coverage": "vitest run --coverage && node scripts/fix-lcov-paths.js",
+    "sonar:coverage": "pnpm run test:coverage && sonar-scanner"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.24",
